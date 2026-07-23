@@ -5,7 +5,7 @@
 ## 如何贡献
 
 ### 报告 Bug
-- 请使用 [GitHub Issues](https://github.com/yosh-wang/uosc-mediainfo/issues)
+- 请使用 [GitHub Issues](https://github.com/yosh-wang/uosc-video-tags/issues)
 - 描述清楚问题现象、复现步骤、mpv 日志
 
 ### 提交代码
