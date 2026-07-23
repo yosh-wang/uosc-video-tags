@@ -118,7 +118,7 @@ portable_config/
 ### 安装步骤
 
 1. 下载 `mediainfo.conf` 放到 `script-opts/` 目录
-2. 下载 `main.lua` 放到 `mpv_config-2026.04.14\portable_config\scripts\uosc/` 目录
+2. 下载 `main.lua` 放到 `mpv_config\portable_config\scripts\uosc/` 目录
 3. 可选：确保 ffprobe 可用（用于 HDR Vivid 识别）
 
 ---
