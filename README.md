@@ -40,16 +40,16 @@
 ![Translation](https://img.shields.io/badge/Translation-100%25-brightgreen)
 ![Chinese](https://img.shields.io/badge/语言-中文-red)
 
-
-## 🎬 MPV播放器·硬核技术交流群
-## 🎬 极致画质/杜比视界/HDR直通/滤镜/脚本/AI字幕/弹幕全配置/ Github开源免费
-## 🎯 群内已有 800 多名 MPV 爱好者（玩家 / Github开发者 / 配置党）
-## 📌 QQ 群号：1097053691
-## 🔗 点击链接加入：https://qm.qq.com/q/KQZsl4wFmG
-## 原创：群友：杳知
-## 适配整合包：群友：寻
-## 感谢二位的付出.
-
+---
+🎬 MPV播放器·硬核技术交流群
+🎬 极致画质/杜比视界/HDR直通/滤镜/脚本/AI字幕/弹幕全配置/ Github开源免费
+🎯 群内已有 800 多名 MPV 爱好者（玩家 / Github开发者 / 配置党）
+📌 QQ 群号：1097053691
+🔗 点击链接加入：https://qm.qq.com/q/KQZsl4wFmG
+原创：群友：杳知
+适配整合包：群友：寻
+感谢二位的付出.
+---
 
 🎬 **为 [uosc](https://github.com/tomasklaen/uosc) 播放器界面添加视频/音频技术参数标签**
 
