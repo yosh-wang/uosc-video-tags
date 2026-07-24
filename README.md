@@ -152,6 +152,6 @@ MIT License
 
 ---
 
-**由 [yosh-wang](https://github.com/yosh-wang) 用 ❤️ 制作**
+**由 好友 寻 提供技术支持， [yosh-wang](https://github.com/yosh-wang) 用 ❤️ 制作**
 
 ⭐ 如果这个项目对您有帮助，请给一个 Star 支持一下！
