@@ -126,15 +126,26 @@ portable_config/
 ## ⚙️ 配置项
 
 ```ini
-# 全局开关
+# 启用/禁用标签显示 (yes/no)
 mediainfo_enabled=yes
+
+# 视频开始时自动显示时长 (秒)，0 为关闭此功能
 mediainfo_initial_display=5
 
 # 尺寸配置
+# 字体大小 (scale 倍数，原版 9.8，1.2倍 12，1.5倍 14)
 mediainfo_font_size=12
+
+# 距离控制栏偏移 (越大标签越靠上)
 mediainfo_y_offset=23
+
+# 标签间距
 mediainfo_gap=5
+
+# 左右内边距
 mediainfo_x_padding=6
+
+# 上下内边距
 mediainfo_y_padding=3
 
 # 缩放配置
@@ -142,6 +153,17 @@ mediainfo_scale_intensity=0.30
 
 # 渐变主题
 mediainfo_theme=bbblurry
+
+# 缩放强度 (0.0=不缩放  0.5=半缩放  1.0=完全跟随窗口)
+mediainfo_scale_intensity=0.30
+
+# 渐变主题 (高亮标签背景) 共17个
+# bbblurry / lavender / amethyst / sapphire / midnight
+# crimson / magenta / amber / gold / bubblegum
+# blush / coral / plasma / electric / autumn / rust / aurora
+# custom - 手动调色
+mediainfo_theme=bbblurry
+
 ```
 
 ---
