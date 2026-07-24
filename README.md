@@ -69,7 +69,7 @@
 | 项目 | 信息 |
 |------|------|
 | 适用脚本 | uosc |
-| 当前版本 | v1.0.0 |
+| 当前版本 | v3.0.0 |
 | 兼容 uosc 版本 | [uosc](https://github.com/dyphire/mpv-config/tree/master/scripts/uosc) |
 | 配置文件 | `script-opts/mediainfo.conf` |
 | 语言 | 中文 (简/繁) / 英文 |
