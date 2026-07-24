@@ -52,8 +52,8 @@
 
 🔗 点击链接加入：https://qm.qq.com/q/KQZsl4wFmG
 
-原创：群友：杳知
-适配整合包：群友：寻
+群友：杳知 原创      群友：寻 二创，适配 [dyphire](https://github.com/dyphire/mpv-config)整合包：
+
 感谢二位的付出.
 
 ---
