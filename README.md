@@ -83,16 +83,6 @@
 
 ---
 
-🎬 MPV播放器·硬核技术交流群 极致画质/杜比视界/HDR直通/滤镜/脚本/AI字幕/弹幕全配置/ Github开源免费
-
-🎯 群内已有 800 多名 MPV 爱好者（玩家 / Github开发者 / 配置党）
-
-📌 QQ 群号：1097053691
-
-🔗 点击链接加入：https://qm.qq.com/q/KQZsl4wFmG
-
----
-
 群友：[杳知](https://github.com/Yaozhil) 原创                 群友：寻 二创，适配 [dyphire](https://github.com/dyphire/mpv-config)整合包：
 
 感谢二位的付出.
