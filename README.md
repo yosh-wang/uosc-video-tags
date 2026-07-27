@@ -243,6 +243,6 @@ MIT License
 
 ---
 
-**由 好友 寻 提供技术支持， [yosh-wang](https://github.com/yosh-wang) 用 ❤️ 制作**
+**由 群友：[杳知](https://github.com/Yaozhil) 原创                 群友：寻 二创，适配 [dyphire](https://github.com/dyphire/mpv-config)整合包：， [yosh-wang](https://github.com/yosh-wang) 用 ❤️ 在创作修改**
 
 ⭐ 如果这个项目对您有帮助，请给一个 Star 支持一下！
