@@ -1261,6 +1261,9 @@ function VideoTags:init()
 	self._cache = nil
 	self._last_fetch = 0
 	self._hdr_vivid = false
+	self._dv_detected = false
+	self._dv_probed = false
+	self._dv_profile = nil
 	self._base_scale = nil
 	self._initial_timer = nil
 
@@ -1287,7 +1290,11 @@ function VideoTags:init()
 		self._cache = nil
 		self._last_fetch = 0
 		self._hdr_vivid = false
+		self._dv_detected = false
+		self._dv_probed = false
+		self._dv_profile = nil
 		self:_probe_hdr_vivid()
+		self:_probe_dolby_vision()
 		self:_start_initial_display()
 		request_render()
 	end)
@@ -1299,6 +1306,7 @@ function VideoTags:init()
 	end)
 
 	self:_probe_hdr_vivid()
+	self:_probe_dolby_vision()
 end
 
 function VideoTags:get_visibility()
@@ -1328,65 +1336,62 @@ function VideoTags:_hwdec_label()
 	return (hw ~= '' and hw ~= 'no') and '硬解' or '软解'
 end
 
+-- ============================================================
+-- HDR 标签检测（核心）
+-- 优先级：① mpv 属性  >  ② ffprobe 缓存  >  ③ 常规 HDR 检测
+-- 完全去除文件名关键词判断
+-- ============================================================
 function VideoTags:_hdr_label()
+	-- 优先：HDR Vivid（ffprobe 检测）
 	if self._hdr_vivid then return 'HDR Vivid (菁彩影像)' end
 
 	local vp = mp.get_property_native('video-params')
 	if not vp then return 'SDR' end
 
 	local track = mp.get_property_native('current-tracks/video', {})
+
+	-- ============================================================
+	-- 第一步：mpv 属性检测（同步，< 1ms）
+	-- ============================================================
+
+	-- 尝试读 dolby-vision-profile
 	local dv_profile = track and tonumber(track['dolby-vision-profile'])
 	if not dv_profile then
 		local dp = mp.get_property('video-params/dolby-vision-profile', '')
 		if dp ~= '' then dv_profile = tonumber(dp) end
 	end
 	if dv_profile and dv_profile > 0 then
-		if dv_profile == 5 then return 'Dolby Vision (P5)'
-		elseif dv_profile == 7 then return 'Dolby Vision (P7)'
-		elseif dv_profile == 8 then return 'Dolby Vision (P8)'
-		else return 'Dolby Vision (P' .. dv_profile .. ')' end
+		return 'Dolby Vision (P' .. dv_profile .. ')'
 	end
 
+	-- 尝试读 dolby-vision-level
 	local dv_level = track and track['dolby-vision-level']
 	if not dv_level then
 		local dl = mp.get_property('video-params/dolby-vision-level', '')
 		if dl ~= '' then dv_level = tonumber(dl) end
 	end
-	if dv_level then return 'Dolby Vision' end
+	if dv_level then
+		return 'Dolby Vision'
+	end
 
-	local function match_vivid(s)
-		if type(s) == 'string' then
-			local clean = s:lower():gsub('[%s%._%-]', '')
-			return clean:find('hdrvivid') or clean:find('cuvahdr') or clean:find('cuva')
+	-- ============================================================
+	-- 第二步：ffprobe 缓存结果（异步检测的缓存）
+	-- ============================================================
+	if self._dv_detected then
+		local p = self._dv_profile
+		if p and p > 0 then
+			return 'Dolby Vision (P' .. p .. ')'
 		end
-		return false
+		return 'Dolby Vision'
 	end
-	local vivid = false
-	if track then
-		for k, v in pairs(track) do
-			if match_vivid(k) or match_vivid(v) then vivid = true break end
-		end
-	end
-	if not vivid and vp then
-		for k, v in pairs(vp) do
-			if match_vivid(k) or match_vivid(v) then vivid = true break end
-		end
-	end
-	if not vivid then
-		vivid = match_vivid(mp.get_property('filename'))
-			or match_vivid(mp.get_property('media-title'))
-			or match_vivid(mp.get_property('path'))
-	end
+
+	-- ============================================================
+	-- 第三步：HDR10+ / HDR10 / HLG / HDR / SDR 检测
+	-- ============================================================
 
 	local gamma = tostring(vp['gamma'] or vp['transfer'] or ''):lower()
-	local is_hdr = (gamma == 'pq' or gamma == 'smpte2084' or gamma == 'hlg' or gamma == 'arib-std-b67')
-	if not is_hdr then
-		local sp = tonumber(vp['sig-peak'])
-		if sp and sp > 1 then is_hdr = true end
-	end
 
-	if vivid and is_hdr then return 'HDR Vivid (菁彩影像)' end
-
+	-- HDR10+
 	if gamma == 'pq' or gamma == 'smpte2084' then
 		local hdr10p = vp['scene-max-r'] or vp['scene-max-g'] or vp['scene-max-b']
 		if not hdr10p and track then
@@ -1396,8 +1401,10 @@ function VideoTags:_hdr_label()
 		return 'HDR10'
 	end
 
+	-- HLG
 	if gamma == 'hlg' or gamma == 'arib-std-b67' then return 'HLG' end
 
+	-- 其他 HDR
 	local sp = tonumber(vp['sig-peak'])
 	if sp and sp > 1 then return 'HDR' end
 
@@ -1546,68 +1553,112 @@ function VideoTags:_collect_tags()
 	return tags
 end
 
+-- ============================================================
+-- ffprobe 查找函数（被 _probe_hdr_vivid 和 _probe_dolby_vision 复用）
+-- ============================================================
+local function find_ffprobe()
+	local env_path = os.getenv('FFPROBE_PATH')
+	if env_path and env_path ~= '' then
+		local fh = io.open(env_path, 'r')
+		if fh then fh:close(); return env_path end
+	end
+
+	local conf_dir = mp.find_config_file('.') or ''
+	if conf_dir ~= '' then
+		local base_dir = conf_dir:gsub('[/\\][^/\\]+$', '')
+		for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
+			local test = base_dir .. '/' .. name
+			local fh = io.open(test, 'r')
+			if fh then fh:close(); return test end
+		end
+	end
+
+	if state.platform == 'windows' then
+		local mpv_exe = mp.get_property('exe-path', '')
+		if mpv_exe ~= '' then
+			local mpv_dir = mpv_exe:gsub('[/\\][^/\\]+$', '')
+			for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
+				local test = mpv_dir .. '/' .. name
+				local fh = io.open(test, 'r')
+				if fh then fh:close(); return test end
+			end
+		end
+	end
+
+	local script_dir = mp.get_property('options/script-dir', '')
+	if script_dir ~= '' then
+		for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
+			local test = script_dir .. '/' .. name
+			local fh = io.open(test, 'r')
+			if fh then fh:close(); return test end
+		end
+	end
+
+	return 'ffprobe'
+end
+
+-- ============================================================
+-- HDR Vivid 异步检测（ffprobe）
+-- ============================================================
 function VideoTags:_probe_hdr_vivid()
-    self._hdr_vivid = false
+	self._hdr_vivid = false
+	local filepath = mp.get_property('path')
+	if not filepath or filepath == '' then return end
+
+	local ext = filepath:match('%.([^%.]+)$')
+	if ext then
+		ext = ext:lower()
+		if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'webm' and ext ~= 'hevc' then
+			return
+		end
+	end
+
+	local ffprobe = find_ffprobe()
+
+	mp.command_native_async({
+		name = 'subprocess',
+		playback_only = true,
+		args = {ffprobe, '-v', 'error', '-select_streams', 'v:0',
+			'-show_frames', '-read_intervals', '%+#1', '-of', 'json', filepath},
+		capture_stdout = true,
+		capture_stderr = false,
+	}, function(ok, result)
+		if ok and result and result.stdout and result.stdout ~= '' then
+			local data = utils.parse_json(result.stdout)
+			if data and data.frames and data.frames[1] and data.frames[1].side_data_list then
+				for _, sd in ipairs(data.frames[1].side_data_list) do
+					if sd.side_data_type and sd.side_data_type:find('Vivid') then
+						self._hdr_vivid = true
+						self._cache = nil
+						request_render()
+						break
+					end
+				end
+			end
+		end
+	end)
+end
+
+-- ============================================================
+-- Dolby Vision 异步检测（ffprobe，作为 mpv 属性的兜底）
+-- 覆盖 P5/P8/P8.1 等 mpv 读不到 profile 的场景
+-- ============================================================
+function VideoTags:_probe_dolby_vision()
+    if self._dv_probed then return end
+    self._dv_probed = true
+
     local filepath = mp.get_property('path')
     if not filepath or filepath == '' then return end
 
     local ext = filepath:match('%.([^%.]+)$')
     if ext then
         ext = ext:lower()
-        if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'webm' and ext ~= 'hevc' then
+        if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'm2ts' then
             return
         end
     end
 
-    -- ===== 改进后的 ffprobe 查找 =====
-    local function find_ffprobe()
-        -- 环境变量
-        local env_path = os.getenv('FFPROBE_PATH')
-        if env_path and env_path ~= '' then
-            local fh = io.open(env_path, 'r')
-            if fh then fh:close(); return env_path end
-        end
-
-        -- mpv 配置目录
-        local conf_dir = mp.find_config_file('.') or ''
-        if conf_dir ~= '' then
-            local base_dir = conf_dir:gsub('[/\\][^/\\]+$', '')
-            for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
-                local test = base_dir .. '/' .. name
-                local fh = io.open(test, 'r')
-                if fh then fh:close(); return test end
-            end
-        end
-
-        -- mpv 可执行文件目录 (Windows)
-        if state.platform == 'windows' then
-            local mpv_exe = mp.get_property('exe-path', '')
-            if mpv_exe ~= '' then
-                local mpv_dir = mpv_exe:gsub('[/\\][^/\\]+$', '')
-                for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
-                    local test = mpv_dir .. '/' .. name
-                    local fh = io.open(test, 'r')
-                    if fh then fh:close(); return test end
-                end
-            end
-        end
-
-        -- 脚本目录
-        local script_dir = mp.get_property('options/script-dir', '')
-        if script_dir ~= '' then
-            for _, name in ipairs({'ffprobe.exe', 'ffprobe'}) do
-                local test = script_dir .. '/' .. name
-                local fh = io.open(test, 'r')
-                if fh then fh:close(); return test end
-            end
-        end
-
-        -- fallback 到系统 PATH
-        return 'ffprobe'
-    end
-
     local ffprobe = find_ffprobe()
-    -- ===== 改进结束 =====
 
     mp.command_native_async({
         name = 'subprocess',
@@ -1621,8 +1672,22 @@ function VideoTags:_probe_hdr_vivid()
             local data = utils.parse_json(result.stdout)
             if data and data.frames and data.frames[1] and data.frames[1].side_data_list then
                 for _, sd in ipairs(data.frames[1].side_data_list) do
-                    if sd.side_data_type and sd.side_data_type:find('Vivid') then
-                        self._hdr_vivid = true
+                    local sd_type = sd.side_data_type or ''
+                    if sd_type:find('Dolby') or sd_type:find('dovi') then
+                        self._dv_detected = true
+                        -- 从 side_data_type 提取 Profile 数字
+                        -- "Profile 5" -> 5
+                        local p = sd_type:match('Profile%s*:?%s*(%d+)')
+                            or sd_type:match('dvhe%.(%d+)%.%d+')
+                        if p then
+                            self._dv_profile = tonumber(p)
+                        else
+                            -- 兼容 "Profile: 5" 或 "Profile5" 格式
+                            p = sd_type:match('Profile[:%s]*(%d+)')
+                            if p then
+                                self._dv_profile = tonumber(p)
+                            end
+                        end
                         self._cache = nil
                         request_render()
                         break
@@ -1633,6 +1698,9 @@ function VideoTags:_probe_hdr_vivid()
     end)
 end
 
+-- ============================================================
+-- 标签样式配置
+-- ============================================================
 local GRADIENT_THEMES = {
 	bbblurry  = {base = '090916', e1 = '6419a9', e2 = '710a44', e3 = '693bb5', e4 = '4ea3d5'},
 	lavender  = {base = '1A0A2E', e1 = '8B5CF6', e2 = 'D946EF', e3 = 'A78BFA', e4 = '6D28D9'},
