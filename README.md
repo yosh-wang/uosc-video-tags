@@ -35,33 +35,39 @@
 </table>
 ---
 # 🎬 uosc Video Tags 视频技术标签模块
+
 [![GitHub stars](https://img.shields.io/github/stars/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/forks)
 [![GitHub watchers](https://img.shields.io/github/watchers/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/watchers)
+
 [![GitHub Repo stars](https://img.shields.io/github/stars/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/forks)
 [![GitHub issues](https://img.shields.io/github/issues/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/issues)
 [![GitHub watchers](https://img.shields.io/github/watchers/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/watchers)
 [![GitHub contributors](https://img.shields.io/github/contributors/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/graphs/contributors)
 [![GitHub license](https://img.shields.io/github/license/yosh-wang/uosc-video-tags?style=flat-square)](https://github.com/yosh-wang/uosc-video-tags/blob/main/LICENSE)
+
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/releases/latest)
 [![GitHub tag](https://img.shields.io/github/v/tag/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/tags)
 [![GitHub release date](https://img.shields.io/github/release-date/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/releases)
 [![GitHub downloads (latest)](https://img.shields.io/github/downloads/yosh-wang/uosc-video-tags/latest/total)](https://github.com/yosh-wang/uosc-video-tags/releases/latest)
 [![GitHub downloads](https://img.shields.io/github/downloads/yosh-wang/uosc-video-tags/total)](https://github.com/yosh-wang/uosc-video-tags/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/yosh-wang/uosc-video-tags/blob/main/LICENSE)
+
 [![GitHub last commit](https://img.shields.io/github/last-commit/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/commits/main)
 [![GitHub commit activity (monthly)](https://img.shields.io/github/commit-activity/m/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/commits/main)
 [![GitHub commit activity (weekly)](https://img.shields.io/github/commit-activity/w/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/commits/main)
 [![GitHub commit activity (yearly)](https://img.shields.io/github/commit-activity/y/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/graphs/contributors)
 [![GitHub contributors (anon)](https://img.shields.io/github/contributors-anon/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/graphs/contributors)
+
 [![GitHub top language](https://img.shields.io/github/languages/top/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
 [![GitHub language count](https://img.shields.io/github/languages/count/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
 [![GitHub repo size](https://img.shields.io/github/repo-size/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
 [![GitHub code size](https://img.shields.io/github/languages/code-size/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
 [![GitHub file count](https://img.shields.io/github/directory-file-count/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
 [![Lines of Code](https://img.shields.io/tokei/lines/github/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags)
+
 ![Status](https://img.shields.io/badge/Status-Stable-brightgreen)
 ![Maintained](https://img.shields.io/badge/Maintained-Yes-brightgreen)
 ![MPV](https://img.shields.io/badge/MPV-Player-blue)
@@ -69,9 +75,12 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![Translation](https://img.shields.io/badge/Translation-100%25-brightgreen)
 ![Chinese](https://img.shields.io/badge/语言-中文-red)
+
+
 ---
-群友：[杳知](https://github.com/Yaozhil) 原创                 群友：寻 二创，适配 [dyphire](https://github.com/dyphire/mpv-config)整合包：
-感谢二位的付出.
+
+群友：[杳知](https://github.com/Yaozhil) 原创              
+
 ---
 🎬 **为 [uosc](https://github.com/tomasklaen/uosc) 播放器界面添加视频/音频技术参数标签**
 
