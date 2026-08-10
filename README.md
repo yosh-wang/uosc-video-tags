@@ -34,6 +34,7 @@
   </tr>
 </table>
 ---
+
 # 🎬 uosc Video Tags 视频技术标签模块
 
 [![GitHub stars](https://img.shields.io/github/stars/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/stargazers)
