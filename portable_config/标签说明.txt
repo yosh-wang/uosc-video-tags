@@ -1,0 +1,92 @@
+============================================================
+视频技术标签 (MediaInfo) — 文件结构与使用方法
+============================================================
+
+一、文件结构
+------------------------------------------------------------
+
+portable_config/
+├── script-opts/
+│   └── mediainfo.conf          标签配置文件（所有设置都在这里改）
+├── scripts/
+│   └── uosc/
+│       ├── elements/
+│       │   └── MediaInfo.lua    标签脚本（自包含单文件，无需外部模块）
+│       └── main.lua             uosc 主脚本（末尾加了一行加载标签）
+
+共 3 个文件，无其他依赖。
+
+
+二、各文件作用
+------------------------------------------------------------
+
+1. MediaInfo.lua（标签脚本）
+   - 检测逻辑：内联实现（HDR Vivid 识别准确）
+   - 样式/排序：与 mpv_config-2026.04.15 一致
+   - 单文件，不依赖 script-modules 或其他外部模块
+
+2. mediainfo.conf（配置文件）
+   - 所有标签设置都在这里修改，无需改脚本
+   - 包括：开关、尺寸、主题、颜色等
+
+3. main.lua（uosc 主脚本）
+   - 仅在末尾加了一行：require('elements/MediaInfo'):new()
+   - 用于加载标签脚本，不改动原有代码
+
+
+三、标签显示顺序（固定）
+------------------------------------------------------------
+
+硬解/软解 → HDR → 编码 → 音频编码 → 音频声道 → 分辨率 → 帧率
+
+
+四、常用配置（mediainfo.conf）
+------------------------------------------------------------
+
+# 启用/禁用标签
+mediainfo_enabled=yes
+
+# 视频开始时自动显示时长（秒），0=关闭
+mediainfo_initial_display=5
+
+# 字体大小（原版9.8，推荐12）
+mediainfo_font_size=12
+
+# 缩放强度（0.0=固定不缩放，1.0=完全跟随窗口）
+mediainfo_scale_intensity=0.30
+
+# 渐变主题（高亮标签的背景效果），共17个：
+#   bbblurry / lavender / amethyst / sapphire / midnight
+#   crimson / magenta / amber / gold / bubblegum
+#   blush / coral / plasma / electric / autumn / rust / aurora
+#   custom（手动调色）
+mediainfo_theme=bbblurry
+
+
+五、更新 uosc 时的迁移方法
+------------------------------------------------------------
+
+更新 uosc 后，只需保留以下 3 个文件即可：
+
+1. 把 MediaInfo.lua 放回 scripts/uosc/elements/
+2. 把 mediainfo.conf 放回 script-opts/
+3. 在新版 main.lua 末尾加一行：require('elements/MediaInfo'):new()
+
+无需其他文件或模块。
+
+
+六、高亮标签说明
+------------------------------------------------------------
+
+以下标签会显示渐变主题背景（高亮）：
+
+- HDR Vivid (菁彩影像)、Dolby Vision、HDR10+、HDR10、HLG
+- 4K UHD、8K UHD
+- VVC、AVS3、AV1
+- TrueHD、DTS-HD MA、DTS-HD HRA、DTS、Dolby Atmos、DTS:X
+- Audio Vivid 菁彩音频、Dolby AC-4、MPEG-H Audio
+- FLAC、ALAC
+- 5.1 环绕声、7.1 环绕声（及以上）
+- 60FPS 及以上帧率
+
+其他标签显示普通半透明背景。
