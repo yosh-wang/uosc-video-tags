@@ -1,10 +1,14 @@
 # 🎬 MPV Player · 硬核技术交流群
+
 [![QQ Group](https://img.shields.io/badge/QQ群-1097053691-12B7F5?logo=tencent-qq&logoColor=white)](https://qm.qq.com/q/KQZsl4wFmG)
 [![Members](https://img.shields.io/badge/群成员-1000+-4CAF50)](https://qm.qq.com/q/KQZsl4wFmG)
+
 ---
 > **🎯 mpv · 为画质而生，为技术而狂 · mpv 🎯**
 ---
+
 ## 📌 群信息
+
 <table>
   <tr>
     <td width="50%" valign="top" style="padding: 0;">
@@ -33,8 +37,8 @@
     </td>
   </tr>
 </table>
----
 
+---
 # 🎬 uosc Video Tags 视频技术标签模块
 
 [![GitHub stars](https://img.shields.io/github/stars/yosh-wang/uosc-video-tags)](https://github.com/yosh-wang/uosc-video-tags/stargazers)
