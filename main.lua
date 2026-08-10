@@ -1293,8 +1293,7 @@ function VideoTags:init()
 		self._dv_detected = false
 		self._dv_probed = false
 		self._dv_profile = nil
-		self:_probe_hdr_vivid()
-		self:_probe_dolby_vision()
+		self:_probe_ffprobe()
 		self:_start_initial_display()
 		request_render()
 	end)
@@ -1305,8 +1304,7 @@ function VideoTags:init()
 		request_render()
 	end)
 
-	self:_probe_hdr_vivid()
-	self:_probe_dolby_vision()
+	self:_probe_ffprobe()
 end
 
 function VideoTags:get_visibility()
@@ -1338,8 +1336,7 @@ end
 
 -- ============================================================
 -- HDR 标签检测（核心）
--- 优先级：① mpv 属性  >  ② ffprobe 缓存  >  ③ 常规 HDR 检测
--- 完全去除文件名关键词判断
+-- 优先级：① ffprobe(HDR Vivid)  >  ② mpv 属性(DV)  >  ③ ffprobe 兜底(DV)  >  ④ 常规 HDR 检测
 -- ============================================================
 function VideoTags:_hdr_label()
 	-- 优先：HDR Vivid（ffprobe 检测）
@@ -1417,16 +1414,44 @@ function VideoTags:_codec_label()
 	local fn = mp.get_property('filename', ''):lower()
 	local lc = c:lower()
 
-	if lc:find('hevc') or lc:find('h265') or lc:find('h%.265')
+	if lc:find('vvc') or lc:find('h266') or lc:find('h%.266')
+		or fn:find('vvc') or fn:find('h266') then
+		return 'VVC'
+	elseif lc:find('avs3') or fn:find('avs3') then
+		return 'AVS3'
+	elseif lc:find('avs2') or lc:find('davs2') or fn:find('avs2') or fn:find('davs2') then
+		return 'AVS2'
+	elseif lc:find('cavs') or fn:find('cavs') then
+		return 'AVS+'
+	elseif lc:find('hevc') or lc:find('h265') or lc:find('h%.265')
 		or fn:find('hevc') or fn:find('x265') or fn:find('h265') then
 		return 'HEVC'
+	elseif lc:find('evc') or fn:find('evc') then
+		return 'EVC'
 	elseif lc:find('avc') or lc:find('h264') or lc:find('h%.264')
 		or fn:find('avc') or fn:find('x264') or fn:find('h264') then
 		return 'AVC'
-	elseif lc:find('av1') or fn:find('av1') then
+	elseif lc:find('av01') or lc:find('av1') or fn:find('av1') then
 		return 'AV1'
 	elseif lc:find('vp9') or fn:find('vp9') then
 		return 'VP9'
+	elseif lc:find('vp8') or fn:find('vp8') then
+		return 'VP8'
+	elseif lc:find('mpeg2video') or lc:find('mpeg2') or fn:find('mpeg2') then
+		return 'MPEG-2'
+	elseif lc:find('mpeg4') or lc:find('xvid') or lc:find('divx')
+		or fn:find('mpeg4') or fn:find('xvid') or fn:find('divx') then
+		return 'MPEG-4'
+	elseif lc:find('vc1') or lc:find('wmv3') or fn:find('vc1') or fn:find('wmv3') then
+		return 'VC-1'
+	elseif lc:find('prores') or fn:find('prores') then
+		return 'ProRes'
+	elseif lc:find('theora') or fn:find('theora') then
+		return 'Theora'
+	elseif lc:find('jpegxl') or lc:find('jxl') or fn:find('jpegxl') or fn:find('jxl') then
+		return 'JPEG XL'
+	elseif lc:find('webp') or fn:find('webp') then
+		return 'WebP'
 	end
 	return c:upper()
 end
@@ -1458,11 +1483,35 @@ end
 function VideoTags:_audio_ch_label()
 	local hr = mp.get_property('audio-params/hr-channels', '')
 	if hr ~= '' then
-		hr = hr:lower()
-		if hr:find('7%.1') then return '7.1 环绕声'
-		elseif hr:find('5%.1') then return '5.1 环绕声'
-		elseif hr:find('stereo') or hr:find('2ch') then return '2.0 立体声'
-		elseif hr:find('mono') or hr:find('1ch') then return '1.0 单声道' end
+		local h = hr:lower()
+		-- X.Y.Z 三维声布局(如 7.1.4 / 9.1.2 / 5.1.4 / 9.1.6 / 11.1.4 ...)
+		local x, y, z = h:match('(%d+)%.(%d+)%.(%d+)')
+		if x and y and z then
+			local xi, yi, zi = tonumber(x), tonumber(y), tonumber(z)
+			if xi >= 5 and yi >= 0 then
+				return tostring(xi) .. '.' .. tostring(yi) .. '.' .. tostring(zi) .. ' 环绕声'
+			else
+				return tostring(xi) .. '.' .. tostring(yi) .. '.' .. tostring(zi)
+			end
+		end
+		-- X.Y 布局(如 7.1 / 5.1 / 9.1 / 11.1 ...)
+		local x2, y2 = h:match('(%d+)%.(%d+)')
+		if x2 and y2 then
+			local xi2, yi2 = tonumber(x2), tonumber(y2)
+			if xi2 == 7 and yi2 == 1 then return '7.1 环绕声'
+			elseif xi2 == 5 and yi2 == 1 then return '5.1 环绕声'
+			elseif xi2 >= 9 and yi2 >= 1 then
+				return tostring(xi2) .. '.' .. tostring(yi2) .. ' 环绕声'
+			elseif xi2 == 2 and yi2 == 0 then return '2.0 立体声'
+			elseif xi2 == 1 and yi2 == 0 then return '1.0 单声道'
+			elseif xi2 == 2 and yi2 == 1 then return '2.1'
+			else
+				return tostring(xi2) .. '.' .. tostring(yi2)
+			end
+		end
+		-- 关键词兜底
+		if h:find('stereo') or h:find('2ch') then return '2.0 立体声'
+		elseif h:find('mono') or h:find('1ch') then return '1.0 单声道' end
 	end
 
 	local ch = mp.get_property_number('audio-params/channel-count', 0)
@@ -1479,26 +1528,76 @@ function VideoTags:_audio_codec_label()
 	local c = mp.get_property('audio-codec', '')
 	if c == '' then return '' end
 	c = c:lower()
-
 	local track = mp.get_property_native('current-tracks/audio', {})
 	local title = (track and track.title or ''):lower()
 
-	if c:find('av3a') or c:find('audio.vivid') or c:find('audio_vivid')
-		or title:find('av3a') or title:find('audio.vivid') or title:find('audio_vivid')
+	-- 合并 codec/title/decoder-desc/codec-desc/demux-codec/metadata 作为检测源
+	-- 用于识别 Atmos/HE-AAC 等依赖元数据的编码
+	local ctx = c .. ' ' .. title
+	if track then
+		ctx = ctx .. ' ' .. tostring(track['decoder-desc'] or '')
+			.. ' ' .. tostring(track['codec-desc'] or '')
+			.. ' ' .. tostring(track['demux-codec'] or '')
+		if type(track.metadata) == 'table' then
+			for k, v in pairs(track.metadata) do
+				ctx = ctx .. ' ' .. tostring(k) .. ' ' .. tostring(v)
+			end
+		end
+	end
+	ctx = ctx:lower()
+
+	if ctx:find('av3a') or ctx:find('audio.vivid') or ctx:find('audio_vivid')
 		or title:find('菁彩音频') then
 		return 'Audio Vivid 菁彩音频'
-	end
-
-	if c:find('truehd') or c:find('mlp') then return 'TrueHD'
-	elseif c:find('e%-ac%-3') or c:find('e%-ac3') or c:find('eac3') or c:find('dd%+') then return 'E-AC3'
-	elseif c:find('ac%-3') or c:find('ac3') or c:find('dolby') then return 'Dolby Digital'
-	elseif c:find('dts%-hd') or c:find('dtshd') or c:find('dts.hd') then return 'DTS-HD'
-	elseif c:find('dts') or c:find('dca') then return 'DTS'
-	elseif c:find('aac') then return 'AAC'
-	elseif c:find('flac') then return 'FLAC'
-	elseif c:find('opus') then return 'Opus'
-	elseif c:find('mp3') then return 'MP3'
-	elseif c:find('pcm') then return 'PCM' end
+	elseif ctx:find('dolbyatmos') or ctx:find('atmos') or ctx:find('joc') then
+		return 'Dolby Atmos'
+	elseif ctx:find('dtsx') then
+		return 'DTS:X'
+	elseif ctx:find('mpegh') or ctx:find('mhm1') or ctx:find('mha1') then
+		return 'MPEG-H Audio'
+	elseif c:find('ac%-4') or c:find('ac4') then
+		return 'Dolby AC-4'
+	elseif c:find('truehd') or c:find('mlp') then
+		return 'TrueHD'
+	elseif c:find('e%-ac%-3') or c:find('e%-ac3') or c:find('eac3') or c:find('dd%+') then
+		return 'E-AC3'
+	elseif c:find('ac%-3') or c:find('ac3') or c:find('dolby') then
+		return 'Dolby Digital'
+	elseif c:find('dts%-hd') or c:find('dtshd') or c:find('dts.hd') then
+		return 'DTS-HD'
+	elseif c:find('dts') or c:find('dca') then
+		return 'DTS'
+	elseif ctx:find('heaacv2') or ctx:find('heaac2') or ctx:find('sbrps')
+		or ctx:find('he%-aac%-v2') or ctx:find('he%-aac2') then
+		return 'HE-AAC v2'
+	elseif ctx:find('heaac') or ctx:find('he%-aac') or ctx:find('aacplus') then
+		return 'HE-AAC'
+	elseif c:find('dab%+') or c:find('dabplus') then
+		return 'DAB+'
+	elseif c:find('alac') then
+		return 'ALAC'
+	elseif c:find('wavpack') or c:find('wavpak') then
+		return 'WavPack'
+	elseif c:find('tak') then
+		return 'TAK'
+	elseif c:find('tta') then
+		return 'TTA'
+	elseif c:find('ape') or c:find('monkey') then
+		return 'APE'
+	elseif c:find('wma') then
+		return 'WMA'
+	elseif c:find('flac') then
+		return 'FLAC'
+	elseif c:find('opus') then
+		return 'Opus'
+	elseif c:find('vorbis') then
+		return 'Vorbis'
+	elseif c:find('aac') then
+		return 'AAC'
+	elseif c:find('mp3') or c:find('mpa') then
+		return 'MP3'
+	elseif c:find('pcm') or c:find('lpcm') then
+		return 'PCM' end
 	return c:upper()
 end
 
@@ -1516,10 +1615,21 @@ function VideoTags:_collect_tags()
 	local tags = {}
 
 	local function is_highlight(s)
-		return s:find('Dolby Vision') or s:find('Vivid') or s:find('HDR10')
+		if s:find('Dolby Vision') or s:find('Vivid') or s:find('HDR10')
 			or s == '4K UHD' or s == '8K UHD'
 			or s:find('TrueHD') or s:find('DTS%-HD') or s:find('^DTS$')
+			or s == 'Dolby Atmos' or s == 'DTS:X'
+			or s == 'Dolby AC-4' or s == 'MPEG-H Audio'
+			or s == 'VVC' or s == 'AVS3' or s == 'AV1'
+			or s == 'FLAC' or s == 'ALAC'
 			or s:find('菁彩')
+			or s:find('环绕声') then
+			return true
+		end
+		-- N声道兜底(N>=6 即 5.1 以上规格高亮)
+		local n = s:match('^(%d+)声道$')
+		if n then return tonumber(n) >= 6 end
+		return false
 	end
 
 	local hw = self:_hwdec_label()
@@ -1531,7 +1641,9 @@ function VideoTags:_collect_tags()
 	end
 
 	local codec = self:_codec_label()
-	if codec ~= '' then table.insert(tags, {text = codec, highlight = false, cat = 'codec'}) end
+	if codec ~= '' then
+		table.insert(tags, {text = codec, highlight = is_highlight(codec), cat = 'codec'})
+	end
 
 	local res = self:_resolution_label()
 	if res ~= '' then
@@ -1539,10 +1651,15 @@ function VideoTags:_collect_tags()
 	end
 
 	local fps = self:_fps_label()
-	if fps ~= '' then table.insert(tags, {text = fps, highlight = false, cat = 'fps'}) end
+	if fps ~= '' then
+		local fps_num = tonumber(fps:match('%d+')) or 0
+		table.insert(tags, {text = fps, highlight = (fps_num >= 60), cat = 'fps'})
+	end
 
 	local ach = self:_audio_ch_label()
-	if ach ~= '' then table.insert(tags, {text = ach, highlight = false, cat = 'audio_ch'}) end
+	if ach ~= '' then
+		table.insert(tags, {text = ach, highlight = is_highlight(ach), cat = 'audio_ch'})
+	end
 
 	local ac = self:_audio_codec_label()
 	if ac ~= '' then
@@ -1554,7 +1671,7 @@ function VideoTags:_collect_tags()
 end
 
 -- ============================================================
--- ffprobe 查找函数（被 _probe_hdr_vivid 和 _probe_dolby_vision 复用）
+-- ffprobe 查找函数（被 _probe_ffprobe 调用）
 -- ============================================================
 local function find_ffprobe()
 	local env_path = os.getenv('FFPROBE_PATH')
@@ -1598,17 +1715,23 @@ local function find_ffprobe()
 end
 
 -- ============================================================
--- HDR Vivid 异步检测（ffprobe）
+-- ffprobe 异步检测（HDR Vivid + Dolby Vision 合并单次调用）
+-- 优先级：mpv 属性 > ffprobe 兜底
 -- ============================================================
-function VideoTags:_probe_hdr_vivid()
+function VideoTags:_probe_ffprobe()
+	if self._dv_probed then return end
+	self._dv_probed = true
+
 	self._hdr_vivid = false
 	local filepath = mp.get_property('path')
 	if not filepath or filepath == '' then return end
+	self._probe_path = filepath
 
 	local ext = filepath:match('%.([^%.]+)$')
 	if ext then
 		ext = ext:lower()
-		if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'webm' and ext ~= 'hevc' then
+		if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'm2ts'
+			and ext ~= 'webm' and ext ~= 'hevc' then
 			return
 		end
 	end
@@ -1623,79 +1746,46 @@ function VideoTags:_probe_hdr_vivid()
 		capture_stdout = true,
 		capture_stderr = false,
 	}, function(ok, result)
-		if ok and result and result.stdout and result.stdout ~= '' then
-			local data = utils.parse_json(result.stdout)
-			if data and data.frames and data.frames[1] and data.frames[1].side_data_list then
-				for _, sd in ipairs(data.frames[1].side_data_list) do
-					if sd.side_data_type and sd.side_data_type:find('Vivid') then
-						self._hdr_vivid = true
-						self._cache = nil
-						request_render()
-						break
+		-- 异步竞态保护：文件已切换则丢弃结果
+		if filepath ~= self._probe_path then return end
+		if not (ok and result and result.stdout and result.stdout ~= '') then return end
+
+		local data = utils.parse_json(result.stdout)
+		if not (data and data.frames and data.frames[1] and data.frames[1].side_data_list) then return end
+
+		local changed = false
+		for _, sd in ipairs(data.frames[1].side_data_list) do
+			local sd_type = (sd.side_data_type or ''):lower()
+
+			-- HDR Vivid 检测
+			if not self._hdr_vivid and sd_type:find('vivid') then
+				self._hdr_vivid = true
+				changed = true
+			end
+
+			-- Dolby Vision 检测（作为 mpv 属性的兜底，覆盖 P5/P8 等 mpv 读不到 profile 的场景）
+			if not self._dv_detected and (sd_type:find('dolby') or sd_type:find('dovi')) then
+				self._dv_detected = true
+				-- 从 side_data_type 提取 Profile 数字
+				local p = sd_type:match('profile%s*:?%s*(%d+)')
+					or sd_type:match('dvhe%.(%d+)%.%d+')
+				if p then
+					self._dv_profile = tonumber(p)
+				else
+					p = sd_type:match('profile[:%s]*(%d+)')
+					if p then
+						self._dv_profile = tonumber(p)
 					end
 				end
+				changed = true
 			end
 		end
+
+		if changed then
+			self._cache = nil
+			request_render()
+		end
 	end)
-end
-
--- ============================================================
--- Dolby Vision 异步检测（ffprobe，作为 mpv 属性的兜底）
--- 覆盖 P5/P8/P8.1 等 mpv 读不到 profile 的场景
--- ============================================================
-function VideoTags:_probe_dolby_vision()
-    if self._dv_probed then return end
-    self._dv_probed = true
-
-    local filepath = mp.get_property('path')
-    if not filepath or filepath == '' then return end
-
-    local ext = filepath:match('%.([^%.]+)$')
-    if ext then
-        ext = ext:lower()
-        if ext ~= 'mp4' and ext ~= 'mkv' and ext ~= 'ts' and ext ~= 'm2ts' then
-            return
-        end
-    end
-
-    local ffprobe = find_ffprobe()
-
-    mp.command_native_async({
-        name = 'subprocess',
-        playback_only = true,
-        args = {ffprobe, '-v', 'error', '-select_streams', 'v:0',
-            '-show_frames', '-read_intervals', '%+#1', '-of', 'json', filepath},
-        capture_stdout = true,
-        capture_stderr = false,
-    }, function(ok, result)
-        if ok and result and result.stdout and result.stdout ~= '' then
-            local data = utils.parse_json(result.stdout)
-            if data and data.frames and data.frames[1] and data.frames[1].side_data_list then
-                for _, sd in ipairs(data.frames[1].side_data_list) do
-                    local sd_type = sd.side_data_type or ''
-                    if sd_type:find('Dolby') or sd_type:find('dovi') then
-                        self._dv_detected = true
-                        -- 从 side_data_type 提取 Profile 数字
-                        -- "Profile 5" -> 5
-                        local p = sd_type:match('Profile%s*:?%s*(%d+)')
-                            or sd_type:match('dvhe%.(%d+)%.%d+')
-                        if p then
-                            self._dv_profile = tonumber(p)
-                        else
-                            -- 兼容 "Profile: 5" 或 "Profile5" 格式
-                            p = sd_type:match('Profile[:%s]*(%d+)')
-                            if p then
-                                self._dv_profile = tonumber(p)
-                            end
-                        end
-                        self._cache = nil
-                        request_render()
-                        break
-                    end
-                end
-            end
-        end
-    end)
 end
 
 -- ============================================================
