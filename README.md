@@ -84,7 +84,7 @@
 
 ---
 
-群友：[杳知](https://github.com/Yaozhil) 原创              
+## 📌 群友：[杳知](https://github.com/Yaozhil) 原创              
 
 ---
 🎬 **为 [uosc](https://github.com/tomasklaen/uosc) 播放器界面添加视频/音频技术参数标签**
