@@ -316,17 +316,30 @@ end
 
 local function resolution_labels(width, height)
     if width <= 0 and height <= 0 then return '', '' end
+    
+    -- 检测是否为隔行扫描
+    local frame_info = mp.get_property_native("video-frame-info")
+    local is_interlaced = frame_info and frame_info.interlaced or false
+    local suffix = is_interlaced and 'i' or 'P'
+    
     if width >= 7600 or height >= 4300 then return '8K', '8K UHD' end
     if width >= 3800 or height >= 2100 then return '4K', '4K UHD' end
     if width >= 2500 or height >= 1400 then return '1440P', '1440P QHD' end
-    if width >= 1900 or height >= 1000 then return '1080P', '1080P' end
-    if width >= 1200 or height >= 700 then return '720P', '720P' end
+    if width >= 1900 or height >= 1000 then 
+        local label = '1080' .. suffix
+        return label, label
+    end
+    if width >= 1200 or height >= 700 then 
+        local label = '720' .. suffix
+        return label, label
+    end
     if height > 0 then
-        local label = tostring(math.floor(height + 0.5)) .. 'P'
+        local label = tostring(math.floor(height + 0.5)) .. suffix
         return label, label
     end
     return '', ''
 end
+
 
 local function format_fps(value)
     local fps = tonumber(value) or 0
@@ -484,7 +497,7 @@ end
 -- 标签高亮判定（与 mpv_config-2026.04.15 完全一致）
 -- ============================================================
 local function is_highlight(s)
-	if s:find('Dolby Vision') or s:find('Vivid') or s:find('HDR10')
+	if s:find('Dolby Vision') or s:find('Vivid') or s:find('HDR10') or s:find('HLG') or s == 'HDR'
 		or s == '4K UHD' or s == '8K UHD'
 		or s:find('TrueHD') or s:find('DTS%-HD') or s:find('^DTS$')
 		or s == 'Dolby Atmos' or s == 'DTS:X'
