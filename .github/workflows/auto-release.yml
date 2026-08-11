@@ -23,11 +23,9 @@ jobs:
       - name: Package portable_config
         id: prepare
         run: |
-          # 直接打包 portable_config 整个目录
           cd portable_config
           zip -r ../uosc-video-tags-${{ github.event.inputs.version }}.zip .
           cd ..
-
           echo "ZIP=uosc-video-tags-${{ github.event.inputs.version }}.zip" >> $GITHUB_OUTPUT
 
       - name: Get commit messages since last tag
@@ -56,33 +54,6 @@ jobs:
           body: |
             ## ⭐ 下载量
             [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ github.event.inputs.version }}/total?cacheSeconds=300)](https://github.com/${{ github.repository }}/releases/tag/${{ github.event.inputs.version }})
-
-            ### 📦 包含内容
-
-            已打包完整的 `portable_config/` 目录，包含：
-
-            | 文件 | 路径 |
-            |------|------|
-            | `MediaInfo.lua` | `scripts/uosc/elements/MediaInfo.lua` |
-            | `mediainfo.conf` | `script-opts/mediainfo.conf` |
-            | `标签说明.txt` | `标签说明.txt` |
-            | `load snippet` | **需手动追加** 见下方说明 |
-
-            ### 🚀 使用方法
-
-            **方式一（推荐）：** 下载 zip 包，直接解压覆盖到 mpv 安装目录的 `portable_config/` 文件夹即可。
-
-            **方式二：** 单独使用
-            1. 从 zip 中取出 `scripts/uosc/elements/MediaInfo.lua` 放到你的 `scripts/uosc/elements/` 目录
-            2. 从 zip 中取出 `script-opts/mediainfo.conf` 放到你的 `script-opts/` 目录
-            3. 在你的 `scripts/uosc/main.lua` **末尾追加一行**：
-            ```lua
-            require('elements/MediaInfo'):new()
-            ```
-
-            > 💡 **无需 ffprobe，无需外部模块**，单文件自包含。
-            >
-            > 💡 `MediaInfo.lua` 必须配合 **uosc 的 main.lua** 使用（基于 uosc 独立 Element 机制）。
 
             ### 更新内容
             ${{ steps.commit_msgs.outputs.MSG }}
