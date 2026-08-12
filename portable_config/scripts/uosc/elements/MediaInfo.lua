@@ -2,7 +2,7 @@
 -- 视频技术标签模块 (MediaInfo) — 独立脚本
 -- 左下角显示视频/音频技术参数标签
 -- 检测逻辑：内联实现（HDR Vivid 识别准确，单文件无需外部模块）
--- 样式/排序/设置：与 mpv_config-2026.04.15 保持一致
+-- 样式/排序/设置：
 -- 配置文件：script-opts/mediainfo.conf
 -- ============================================================
 
@@ -97,6 +97,7 @@ local function read_snapshot()
         container_fps = mp.get_property_number('container-fps', 0),
         audio_channel_count = mp.get_property_number('audio-params/channel-count', 0),
         audio_channels = mp.get_property_number('audio-channels', 0),
+        frame_info = mp.get_property_native('video-frame-info', {}),
     }
 end
 
@@ -314,11 +315,10 @@ local function detect_audio_layout(snapshot)
     return count > 0 and (tostring(count) .. 'ch') or ''
 end
 
-local function resolution_labels(width, height)
+local function resolution_labels(width, height, frame_info)
     if width <= 0 and height <= 0 then return '', '' end
-    
+
     -- 检测是否为隔行扫描
-    local frame_info = mp.get_property_native("video-frame-info")
     local is_interlaced = frame_info and frame_info.interlaced or false
     local suffix = is_interlaced and 'i' or 'P'
     
@@ -364,7 +364,7 @@ local function from_snapshot(snapshot)
     local _, audio_codec_context = build_context(
         snapshot, snapshot.audio_track, snapshot.audio_codec, false
     )
-    local resolution, resolution_long = resolution_labels(width, height)
+    local resolution, resolution_long = resolution_labels(width, height, snapshot.frame_info)
     local fps = tonumber(snapshot.fps) or 0
     if fps <= 0 then fps = tonumber(snapshot.container_fps) or 0 end
     return {
