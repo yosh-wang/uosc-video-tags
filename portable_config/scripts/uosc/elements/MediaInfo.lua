@@ -1,12 +1,65 @@
 -- ============================================================
 -- 视频技术标签模块 (MediaInfo) — 独立脚本
 -- 左下角显示视频/音频技术参数标签
--- 检测逻辑：内联实现（HDR Vivid 识别准确，单文件无需外部模块）
--- 样式/排序/设置：
--- 配置文件：script-opts/mediainfo.conf
+-- 检测逻辑：内联实现（参考杳知 2026.08.24 版逻辑升级）
+--   - 视频编码：优先从 track 元数据检测（detect_snapshot_video_codec）
+--   - Dolby Vision：增加 colormatrix + demuxer 元数据判定
+--   - 隔行扫描：改用 video-frame-info 属性
+-- 样式/排序/设置：保持原有设计，配置文件 script-opts/mediainfo.conf
 -- ============================================================
 
 local Element = require('elements/Element')
+
+-- ============================================================
+-- Dolby Vision demuxer 元数据提取（内联合并自 media-format-metadata.lua）
+-- 监听 FFmpeg lavf 日志，提取 DV Profile/Level 写入 user-data
+-- ============================================================
+do
+	local root = 'user-data/media-format/'
+	local current_profile = 0
+	local current_level = 0
+
+	local function set_if_changed(name, value)
+		local property = root .. name
+		if mp.get_property_native(property) == value then return end
+		mp.set_property_native(property, value)
+	end
+
+	local function publish()
+		set_if_changed('dolby-vision-profile', current_profile)
+		set_if_changed('dolby-vision-level', current_level)
+		set_if_changed('dolby-vision-source', current_profile > 0 and 'demuxer' or '')
+	end
+
+	local function clear()
+		current_profile = 0
+		current_level = 0
+		publish()
+	end
+
+	local function on_log_message(event)
+		if tostring(event and event.prefix or '') ~= 'lavf' then return end
+		local text = tostring(event and event.text or '')
+		local profile, level = text:match(
+			'Found Dolby Vision config record:%s*profile%s+(%d+)%s+level%s+(%d+)'
+		)
+		profile, level = tonumber(profile), tonumber(level)
+		if not profile or profile <= 0 then return end
+		if current_profile == profile and current_level == (level or 0) then return end
+		current_profile = profile
+		current_level = level or 0
+		publish()
+		msg.info(string.format(
+			'demuxer-confirmed Dolby Vision P%d level %d',
+			current_profile, current_level
+		))
+	end
+
+	mp.enable_messages('v')
+	mp.register_event('start-file', clear)
+	mp.register_event('log-message', on_log_message)
+	clear()
+end
 
 -- ============================================================
 -- 媒体格式检测逻辑（内联实现）
@@ -87,28 +140,36 @@ local function read_snapshot()
         media_title = mp.get_property('media-title', ''),
         path = mp.get_property('path', ''),
         video_params = mp.get_property_native('video-params', {}),
+        video_frame_info = mp.get_property_native('video-frame-info', {}),
         audio_params = mp.get_property_native('audio-params', {}),
         video_track = read_selected_track('video'),
         audio_track = read_selected_track('audio'),
         video_codec = mp.get_property('video-codec', ''),
+        detected_dv_profile = mp.get_property_number(
+            'user-data/media-format/dolby-vision-profile', 0),
+        detected_dv_level = mp.get_property_number(
+            'user-data/media-format/dolby-vision-level', 0),
         audio_codec = mp.get_property('audio-codec', ''),
         hwdec = mp.get_property('hwdec-current', ''),
         fps = mp.get_property_number('estimated-vf-fps', 0),
         container_fps = mp.get_property_number('container-fps', 0),
         audio_channel_count = mp.get_property_number('audio-params/channel-count', 0),
         audio_channels = mp.get_property_number('audio-channels', 0),
-        frame_info = mp.get_property_native('video-frame-info', {}),
     }
 end
 
 local function dolby_vision_label(snapshot, context)
     local track = snapshot.video_track or {}
     local params = snapshot.video_params or {}
+    local colormatrix = lower(params.colormatrix or params['color-matrix'])
     local profile = tonumber(track['dolby-vision-profile'])
         or tonumber(params['dolby-vision-profile'])
+        or tonumber(snapshot.detected_dv_profile)
     local detected = positive(profile)
         or track['dolby-vision-level'] ~= nil
         or params['dolby-vision-level'] ~= nil
+        or positive(snapshot.detected_dv_level)
+        or colormatrix == 'dolbyvision'
         or contains(context, 'dolbyvision')
         or contains(context, 'dovi')
         or contains(context, 'dvhe')
@@ -191,6 +252,23 @@ local function detect_video_codec(context)
         for _, needle in ipairs(rule[2]) do
             if contains(context, needle) then return rule[1] end
         end
+    end
+    return ''
+end
+
+local function detect_snapshot_video_codec(snapshot)
+    local track = type(snapshot.video_track) == 'table' and snapshot.video_track or {}
+    local candidates = {
+        snapshot.video_codec or '',
+        track.codec or '',
+        track['demux-codec'] or '',
+        track['codec-desc'] or '',
+        track['decoder-desc'] or '',
+        track.format or '',
+    }
+    for _, value in ipairs(candidates) do
+        local label = detect_video_codec(compact(value))
+        if label ~= '' then return label end
     end
     return ''
 end
@@ -315,26 +393,21 @@ local function detect_audio_layout(snapshot)
     return count > 0 and (tostring(count) .. 'ch') or ''
 end
 
-local function resolution_labels(width, height, frame_info)
+local function resolution_labels(width, height, interlaced)
     if width <= 0 and height <= 0 then return '', '' end
-
-    -- 检测是否为隔行扫描
-    local is_interlaced = frame_info and frame_info.interlaced or false
-    local suffix = is_interlaced and 'i' or 'P'
-    
     if width >= 7600 or height >= 4300 then return '8K', '8K UHD' end
     if width >= 3800 or height >= 2100 then return '4K', '4K UHD' end
     if width >= 2500 or height >= 1400 then return '1440P', '1440P QHD' end
-    if width >= 1900 or height >= 1000 then 
-        local label = '1080' .. suffix
+    if width >= 1900 or height >= 1000 then
+        local label = interlaced and '1080i' or '1080P'
         return label, label
     end
-    if width >= 1200 or height >= 700 then 
-        local label = '720' .. suffix
+    if width >= 1200 or height >= 700 then
+        local label = interlaced and '720i' or '720P'
         return label, label
     end
     if height > 0 then
-        local label = tostring(math.floor(height + 0.5)) .. suffix
+        local label = tostring(math.floor(height + 0.5)) .. (interlaced and 'i' or 'P')
         return label, label
     end
     return '', ''
@@ -353,6 +426,8 @@ end
 local function from_snapshot(snapshot)
     snapshot = type(snapshot) == 'table' and snapshot or {}
     local params = type(snapshot.video_params) == 'table' and snapshot.video_params or {}
+    local frame_info = type(snapshot.video_frame_info) == 'table'
+        and snapshot.video_frame_info or {}
     local width = tonumber(params.w or params.dw or params.width) or 0
     local height = tonumber(params.h or params.dh or params.height) or 0
     local video_raw, video_context = build_context(
@@ -364,14 +439,16 @@ local function from_snapshot(snapshot)
     local _, audio_codec_context = build_context(
         snapshot, snapshot.audio_track, snapshot.audio_codec, false
     )
-    local resolution, resolution_long = resolution_labels(width, height, snapshot.frame_info)
+    local interlaced = frame_info.interlaced == true
+    local resolution, resolution_long = resolution_labels(width, height, interlaced)
     local fps = tonumber(snapshot.fps) or 0
     if fps <= 0 then fps = tonumber(snapshot.container_fps) or 0 end
     return {
         video_present = width > 0 or height > 0,
         resolution = resolution,
         resolution_long = resolution_long,
-        video_codec = detect_video_codec(video_context),
+        interlaced = interlaced,
+        video_codec = detect_snapshot_video_codec(snapshot),
         dynamic_range = detect_dynamic_range(snapshot, video_context),
         fps = fps,
         fps_label = format_fps(fps),
@@ -576,7 +653,7 @@ end
 
 -- ============================================================
 -- 收集标签（使用内联检测逻辑）
--- 排序：硬解/软解 → HDR → 编码 → 音频编码 → 音频声道 → 分辨率 → 帧率
+-- 排序：硬解/软解 → 分辨率 → HDR → 视频编码 → 音频编码 → 音频声道 → 帧率
 -- ============================================================
 function MediaInfo:_collect_tags()
 	local now = mp.get_time()
@@ -596,6 +673,12 @@ function MediaInfo:_collect_tags()
 	-- 硬解/软解
 	local hw = info.hwdec == 'HW' and '硬解' or '软解'
 	table.insert(tags, {text = hw, highlight = false, cat = 'hwdec'})
+
+	-- 分辨率（移到 HDR 之前）
+	local res = convert_res_label(info.resolution_long or '')
+	if res ~= '' then
+		table.insert(tags, {text = res, highlight = is_highlight(res), cat = 'res'})
+	end
 
 	-- HDR / 动态范围
 	local hdr = convert_hdr_label(info.dynamic_range or '')
@@ -619,12 +702,6 @@ function MediaInfo:_collect_tags()
 	local ach = convert_audio_ch_label(info.audio_layout or '')
 	if ach ~= '' then
 		table.insert(tags, {text = ach, highlight = is_highlight(ach), cat = 'audio_ch'})
-	end
-
-	-- 分辨率
-	local res = convert_res_label(info.resolution_long or '')
-	if res ~= '' then
-		table.insert(tags, {text = res, highlight = is_highlight(res), cat = 'res'})
 	end
 
 	-- 帧率
