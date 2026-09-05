@@ -88,8 +88,12 @@
 ## 📌 群友：[杳知](https://github.com/Yaozhil) 原创 ，  样式参考 "寻"  ， 本人二次修改 加工          
 
 ---
-🎬 **为 [uosc](https://github.com/tomasklaen/uosc) 播放器界面添加视频/音频技术参数标签**
 
+
+
+## 🎬 已经适配：[dyphire/mpv-config](https://github.com/dyphire/mpv-config) 整合包
+
+为 [uosc](https://github.com/tomasklaen/uosc) 播放器界面添加视频/音频技术参数标签
 在播放器左下角（控制栏上方）实时显示当前媒体的编码、分辨率、HDR、音频等信息。
 
 **完全独立模块 · 不修改 uosc 核心代码 · 更新 uosc 时只需复制模块代码**
