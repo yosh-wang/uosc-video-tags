@@ -1,6 +1,20 @@
 -- ============================================================
 -- 视频技术标签模块 (MediaInfo) — 独立脚本
 -- 左下角显示视频/音频技术参数标签
+--
+-- 作者：yosh.wang
+-- 🔗 项目仓库：https://github.com/yosh-wang/uosc-video-tags
+-- 🔗 MPV中文社区：https://github.com/yosh-wang/MPV-QQ-Discussion-Group
+-- 🔗 mpv资源导航：https://github.com/yosh-wang/MPV-Resource-Index
+--
+-- 📌 QQ ①群：1097053691【2000人群已满】
+-- 📌 QQ ②群：1104144778
+-- 🔗 ①群入群链接：https://qm.qq.com/q/CnzyTeDAoo
+-- 🔗 ②群入群链接：https://qm.qq.com/q/KDxk01ukwe
+-- 🔗 进群暗号：mpv 玩家
+-- ============================================================
+-- 视频技术标签模块 (MediaInfo) — 独立脚本
+-- 左下角显示视频/音频技术参数标签
 -- 检测逻辑：内联实现（参考杳知 2026.08.24 版逻辑升级）
 --   - 视频编码：优先从 track 元数据检测（detect_snapshot_video_codec）
 --   - Dolby Vision：增加 colormatrix + demuxer 元数据判定
